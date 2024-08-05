@@ -1,7 +1,7 @@
 #!/bin/bash
 
 USERNAME=$(whoami)
-WORKDIR="/home/${USERNAME}/.nezha-agent"
+WORKDIR="/home/${USERNAME}/.nz"
 
 download_agent() {
     DOWNLOAD_LINK="https://github.com/nezhahq/agent/releases/latest/download/nezha-agent_freebsd_amd64.zip"
@@ -23,10 +23,10 @@ decompression() {
 }
 
 install_agent() {
-    install -m 755 ${TMP_DIRECTORY}/nezha-agent ${WORKDIR}/nezha-agent
+    install -m 755 ${TMP_DIRECTORY}/nezha-agent ${WORKDIR}/bot
 }
 
-generate_run_agent(){
+generate_run_bot(){
     echo "关于接下来需要输入的三个变量，请注意："
     echo "Dashboard 站点地址可以写 IP 也可以写域名（域名不可套 CDN）;但是请不要加上 http:// 或者 https:// 等前缀，直接写 IP 或者域名即可；"
     echo "面板 RPC 端口为你的 Dashboard 安装时设置的用于 Agent 接入的 RPC 端口（默认 5555）；"
@@ -43,36 +43,35 @@ generate_run_agent(){
 
     if [ -z "${NZ_DASHBOARD_SERVER}" ] || [ -z "${NZ_DASHBOARD_PASSWORD}" ]; then
         echo "error! 所有选项都不能为空"
-        return 1
         rm -rf ${WORKDIR}
-        exit
+        exit 1
     fi
 
     cat > ${WORKDIR}/start.sh << EOF
 #!/bin/bash
-pgrep -f 'nezha-agent' | xargs -r kill
+pgrep -f 'bot' | xargs -r kill
 cd ${WORKDIR}
-TMPDIR="${WORKDIR}" exec ${WORKDIR}/nezha-agent -s ${NZ_DASHBOARD_SERVER}:${NZ_DASHBOARD_PORT} -p ${NZ_DASHBOARD_PASSWORD} --report-delay 4 --disable-auto-update --disable-force-update ${ARGS} >/dev/null 2>&1
+TMPDIR="${WORKDIR}" exec ${WORKDIR}/bot -s ${NZ_DASHBOARD_SERVER}:${NZ_DASHBOARD_PORT} -p ${NZ_DASHBOARD_PASSWORD} --report-delay 4 --disable-auto-update --disable-force-update ${ARGS} >/dev/null 2>&1
 EOF
     chmod +x ${WORKDIR}/start.sh
 }
 
-run_agent(){
+run_bot(){
     nohup ${WORKDIR}/start.sh >/dev/null 2>&1 &
-    printf "nezha-agent已经准备就绪，请按下回车键启动\n"
+    printf "bot已经准备就绪，请按下回车键启动\n"
     read
-    printf "正在启动nezha-agent，请耐心等待...\n"
+    printf "正在启动bot，请耐心等待...\n"
     sleep 3
-    if pgrep -f "nezha-agent -s" > /dev/null; then
-        echo "nezha-agent 已启动！"
-        echo "如果面板处未上线，请检查参数是否填写正确，并停止 agent 进程，删除已安装的 agent 后重新安装！"
-        echo "停止 agent 进程的命令：pgrep -f 'nezha-agent' | xargs -r kill"
-        echo "删除已安装的 agent 的命令：rm -rf ~/.nezha-agent"
+    if pgrep -f "bot -s" > /dev/null; then
+        echo "bot 已启动！"
+        echo "如果面板处未上线，请检查参数是否填写正确，并停止 bot 进程，删除已安装的 bot 后重新安装！"
+        echo "停止 bot 进程的命令：pgrep -f 'bot' | xargs -r kill"
+        echo "删除已安装的 bot 的命令：rm -rf ~/.nz"
         echo
-        echo "如果你想使用 pm2 管理 agent 进程，请执行：pm2 start ~/.nezha-agent/start.sh --name nezha-agent"
+        echo "如果你想使用 pm2 管理 bot 进程，请执行：pm2 start ~/.nz/start.sh --name bot"
     else
         rm -rf "${WORKDIR}"
-        echo "nezha-agent 启动失败，请检查参数填写是否正确，并重新安装！"
+        echo "bot 启动失败，请检查参数填写是否正确，并重新安装！"
     fi
 }
 
@@ -81,9 +80,9 @@ cd ${WORKDIR}
 TMP_DIRECTORY="$(mktemp -d)"
 ZIP_FILE="${TMP_DIRECTORY}/nezha-agent_freebsd_amd64.zip"
 
-[ ! -e ${WORKDIR}/start.sh ] && generate_run_agent
-[ ! -e ${WORKDIR}/nezha-agent ] && download_agent \
+[ ! -e ${WORKDIR}/start.sh ] && generate_run_bot
+[ ! -e ${WORKDIR}/bot ] && download_agent \
 && decompression "${ZIP_FILE}" \
 && install_agent
 rm -rf "${TMP_DIRECTORY}"
-[ -e ${WORKDIR}/start.sh ] && run_agent
+[ -e ${WORKDIR}/start.sh ] && run_bot
